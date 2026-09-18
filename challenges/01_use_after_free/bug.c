@@ -120,7 +120,7 @@ static void screen_dispatch(Screen *s, int code) {
 static void screen_render(Screen *s) {
     for (int i = 0; i < s->count; i++) {
         Widget *w = s->items[i];
-        w->vtbl->render(w);      
+        w->vtbl->render(w);
     }
 }
 
@@ -132,7 +132,7 @@ static void dialog_on_event(Widget *self, int code) {
 }
 
 static char *app_build_status(const char *text) {
-    char *msg = malloc(sizeof(Widget));   
+    char *msg = malloc(sizeof(Widget));
     if (!msg) exit(1);
 
     /* [테스트용 연출] 재사용한 메모리를 0xAB 로 '일부러' 덮어써서 오염시킨다.
@@ -146,6 +146,7 @@ static char *app_build_status(const char *text) {
 }
 
 int main(void) {
+
     Screen s = { .count = 0 };
 
     screen_add(&s, widget_new(&LABEL_VT,  10, "Welcome"));
@@ -158,12 +159,24 @@ int main(void) {
     screen_dispatch(&s, 1);
 
     /* TODO 닫힌(closed) 위젯을 여기서 정리(free + 해당 슬롯 NULL)할 필요가 있음 */
+    Widget *w;
 
-    char *status = app_build_status("dialog closed");
+    int count = s.count;
+    for (int i = 0; i < count; i++)
+    {
+        w = s.items[i];
+        if (w->closed != 0)
+        {
+            s.items[i] = s.items[i+1];
+            s.count--;
+        }
+    }
+    char *status = app_build_status("dialog closed"); //주소
+
     printf("%s\n", status);
 
     printf("frame 2:\n");
-    screen_render(&s);           
+    screen_render(&s);
 
     free(status);
     for (int i = 0; i < s.count; i++) free(s.items[i]);
