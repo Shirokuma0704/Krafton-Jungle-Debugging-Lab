@@ -63,11 +63,19 @@ static void expand(const Config *c, const char *tmpl, char *out, size_t outcap) 
             if (kl >= sizeof key) kl = sizeof key - 1;
             memcpy(key, p + 2, kl);
             key[kl] = '\0';
-
-            const char *v = cfg_get(c, key);      
-            size_t vl = strlen(v);                 
+            const char *v = cfg_get(c, key);
+            if (v !=NULL)
+            {
+            size_t vl = strlen(v);
             if (o + vl < outcap) { memcpy(out + o, v, vl); o += vl; }
             p = end + 1;
+            }
+            else
+            {
+                fprintf(stderr, "%s가 비어있습니다. \n", key);
+                out[0] = '\0';
+                return; //에러출력
+            }
         } else {
             if (o + 1 < outcap) out[o++] = *p;
             p++;
@@ -85,6 +93,8 @@ int main(void) {
      *   생각해보기: n 이 쓰레기 값이면 cfg_set/cfg_get 에서 무슨 일이 벌어질까?
      *               */
     Config cfg = { .n = 0 };
+
+    // TODO: 초기값 추가
     cfg_set(&cfg, "host", "example.com");
     cfg_set(&cfg, "port", "8080");
 
@@ -101,6 +111,6 @@ int main(void) {
 
     expand(&cfg, tmpl, out, sizeof out);   /* ${path} 치환 시 NULL 역참조 → 크래시 */
 
-    printf("url = %s\n", out);
+    if (out[0] != '\0') printf("url = %s\n", out);
     return 0;
 }
