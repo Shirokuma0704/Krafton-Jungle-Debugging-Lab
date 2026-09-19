@@ -46,8 +46,20 @@ static char *skip_ws(char *s) {
 }
 
 static void parse_headers(char *text, Headers *h) {
+    if (text == NULL)
+    {
+        fprintf(stderr, "empty text. \n");
+        return;
+    }
     for (char *line = strtok(text, "\n"); line != NULL; line = strtok(NULL, "\n")) {
-        char *colon = strchr(line, ':');   
+        char *colon = strchr(line, ':');
+
+        if (colon == NULL)
+        {
+            fprintf(stderr, "not parsed by %s. \n", line);
+            h->count = 0;
+            return;
+        }
 
         *colon = '\0';                    
         char *key = line;
@@ -70,8 +82,11 @@ int main(void) {
         "User-Agent: memdbg-cli\n";
 
     Headers h = { .count = 0 };
-    parse_headers(raw, &h);                
+    parse_headers(raw, &h);
 
+
+    if (h.count == 0)
+        return 0;
     printf("parsed %d headers\n", h.count);
     for (int i = 0; i < h.count; i++)
         printf("  %s = %s\n", h.keys[i], h.vals[i]);
