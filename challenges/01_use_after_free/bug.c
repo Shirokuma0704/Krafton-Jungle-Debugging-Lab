@@ -33,10 +33,6 @@
  *   → 같은 주소가 destroy 후 render 에서 다시 나오고, vtbl 값이 달라져 있으면 UAF.
  *   (stdout 은 버퍼링되니 stderr 로 찍어야 크래시 직전 로그가 남는다)
  *
- * TODO: "해제"와 "슬롯 정리"를 한 곳에서 같이 하세요. 위젯 자신은 Screen 을 모르므로
- *       (dialog_on_event 는 self 만 안다) 이벤트 핸들러에서는 closed 표시만 남기고,
- *       Screen 쪽에서 closed 위젯을 free 한 뒤 그 슬롯을 NULL 로 만드는 편이 자연스럽습니다.
- *       이후 dispatch/render 루프가 NULL 슬롯을 건너뛰게 하세요. "해제 = 소유 포인터 무효화".
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -102,7 +98,7 @@ static Widget *widget_new(const VTable *vt, int id, const char *label) {
 }
 
 static void widget_destroy(Widget *w) {
-    free(w);          
+    w->vtbl = NULL;
 }
 
 /* ── Screen ──────────────────────────────────────────────────── */
@@ -120,7 +116,7 @@ static void screen_dispatch(Screen *s, int code) {
 static void screen_render(Screen *s) {
     for (int i = 0; i < s->count; i++) {
         Widget *w = s->items[i];
-        w->vtbl->render(w);
+        if (w->vtbl != NULL) w->vtbl->render(w);
     }
 }
 
@@ -157,21 +153,25 @@ int main(void) {
     printf("frame 1:\n");
     screen_render(&s);
     screen_dispatch(&s, 1);
+    Widget *temp;
 
-    /* TODO 닫힌(closed) 위젯을 여기서 정리(free + 해당 슬롯 NULL)할 필요가 있음 */
-    Widget *w;
-
+    char *status = app_build_status("dialog closed"); //주소
     int count = s.count;
-    for (int i = 0; i < count; i++)
+    for (int idx = 0; idx < s.count ; idx++)
     {
-        w = s.items[i];
-        if (w->closed != 0)
+        if (s.items[idx]->vtbl == NULL) // closed가 1이고  빈배열이 **동시**에 충족한다면; 인풋이 빈배열이라도, 이미 한번 빈배열을 보여주고 dispatch된 상태!
         {
-            s.items[i] = s.items[i+1];
+            temp = s.items[idx];
+            for (int cur_idx = idx; cur_idx < s.count; cur_idx++)
+            {
+            s.items[cur_idx] = s.items[cur_idx+1];
+            }
+            s.items[s.count-1] = temp;
+            idx--;
             s.count--;
         }
     }
-    char *status = app_build_status("dialog closed"); //주소
+
 
     printf("%s\n", status);
 
@@ -179,6 +179,6 @@ int main(void) {
     screen_render(&s);
 
     free(status);
-    for (int i = 0; i < s.count; i++) free(s.items[i]);
+    for (int i = 0; i < count; i++) free(s.items[i]);
     return 0;
 }
