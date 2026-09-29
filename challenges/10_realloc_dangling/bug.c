@@ -44,7 +44,7 @@ typedef struct {
     int   *data;
     size_t len, cap;
     int   *clipboard;       
-    int   *undo[MAX_UNDO];   
+    int   *undo[MAX_UNDO];
     int    undo_n;
 } EditBuffer;
 
@@ -61,7 +61,13 @@ static void eb_init(EditBuffer *e) {
 }
 
 static void eb_snapshot(EditBuffer *e) {
-    if (e->undo_n < MAX_UNDO) e->undo[e->undo_n++] = e->data;
+    if (e->undo_n < MAX_UNDO)
+    {
+        e->undo[e->undo_n] = malloc(e->len * sizeof(int));
+        if (! e->undo[e->undo_n]) { perror("malloc"); exit(1); }
+        memcpy(e->undo[e->undo_n], e->data, e->len * sizeof(int));
+        e->undo_n++;
+    }
 }
 
 static void eb_grow(EditBuffer *e, size_t need) {
@@ -82,7 +88,7 @@ static void eb_free(EditBuffer *e) {
     free(e->data);
     free(e->clipboard);
     for (int i = 0; i < e->undo_n; i++) {
-        free(e->undo[i]);           
+        free(e->undo[i]);
     }
     e->undo_n = 0;
     e->data = NULL;
