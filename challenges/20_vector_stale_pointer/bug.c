@@ -75,14 +75,14 @@ int main(void) {
 
     for (int k = 0; k < 200000; k++) hist_add(&h, k);
 
-    Bucket *hot = &h.data[100000];
-    hot->count = 1;
+    int hot_idx = 100000;
+    h.data[hot_idx].count = 1;
 
     for (int k = 200000; k < 600000; k++) hist_add(&h, k);
 
-    hot->count += 1000;
+    h.data[hot_idx].count += 1000;
 
-    printf("hot=%ld total=%ld len=%zu\n", hot->count, hist_total(&h), h.len);
+    printf("hot=%ld total=%ld len=%zu\n", h.data[hot_idx].count, hist_total(&h), h.len);
     free(h.data);
     return 0;
 }
